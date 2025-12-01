@@ -1,0 +1,12 @@
+# --- Xử lý hình ảnh (Bắt buộc cho cả Server & Client) ---
+# Dùng để chuyển đổi dữ liệu bytes từ gói tin RTP thành hình ảnh hiển thị
+Pillow>=10.0.0
+
+# --- Giao diện người dùng (Cho team UI Figma) ---
+# Framework GUI hiện đại để thay thế Tkinter sau này
+PyQt6>=6.5.0
+
+# --- Xử lý Video nâng cao (Cho phần HD Streaming & Buffer) ---
+# Dùng để resize ảnh, xử lý frame tốc độ cao nếu Pillow không đủ nhanh
+opencv-python>=4.8.0
+numpy>=1.24.0
