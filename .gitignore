@@ -1,0 +1,32 @@
+# --- Python Core ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Virtual Environments (Môi trường ảo) ---
+venv/
+env/
+.env
+.venv/
+
+# --- IDE Settings (Cấu hình trình biên tập code) ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS System Files (File rác của hệ điều hành) ---
+.DS_Store
+Thumbs.db
+
+# --- Project Specific ---
+# Bỏ qua các file video quá nặng nếu bạn tải về test HD (giữ lại movie.Mjpeg)
+assets/videos/*.mp4
+assets/videos/*.mkv
+assets/videos/*.avi
+
+# Giữ lại file mẫu movie.Mjpeg (dùng dấu chấm than để không ignore)
+!assets/videos/movie.Mjpeg
+
+# Bỏ qua các file log tạm thời (nếu có)
+*.log
