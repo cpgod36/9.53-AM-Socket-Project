@@ -34,7 +34,9 @@ class ServerWorker:
     
     def __init__(self, clientInfo):
         self.clientInfo = clientInfo
-        self.clientInfo['rtspSocket'][0].settimeout(None) 
+        # Set timeout to None to ensure blocking mode or handle it properly
+        if self.clientInfo['rtspSocket'][0]:
+            self.clientInfo['rtspSocket'][0].settimeout(0.5)
         
     def run(self):
         threading.Thread(target=self.recvRtspRequest).start()
@@ -49,10 +51,15 @@ class ServerWorker:
                     print("-" * 40)
                     print("Data received:\n" + data.decode("utf-8"))
                     self.processRtspRequest(data.decode("utf-8"))
+            except socket.timeout:
+                continue
             except Exception as e:
+                # Nếu lỗi là 'event' (KeyError) do đóng ngắt quãng thì bỏ qua
+                if str(e) == "'event'":
+                    break
                 print(f"Error receiving data: {e}")
                 break
-    
+            
     def processRtspRequest(self, data):
         """Process RTSP request sent from the client."""
         lines = data.split('\n')
@@ -62,6 +69,7 @@ class ServerWorker:
         
         VIDEO_DIR = "assets/video" 
         filename = os.path.join(VIDEO_DIR, filename_req)
+        
         seq = 0
         for line in lines:
             if "CSeq:" in line:
@@ -70,7 +78,6 @@ class ServerWorker:
                 except:
                     pass
             if "Session:" in line:
-                # Logic mở rộng: Kiểm tra Session ID nếu cần bảo mật
                 pass
 
         # Process SETUP request
@@ -81,18 +88,16 @@ class ServerWorker:
                     self.clientInfo['videoStream'] = VideoStream(filename)
                     self.state = self.READY
                 except IOError:
+                    print(f"File not found: {filename}")
                     self.replyRtsp(self.FILE_NOT_FOUND_404, seq)
                     return 
                 
                 self.clientInfo['session'] = randint(100000, 999999)
                 
-                # Tìm Port thông minh (Robust Parsing)
-                # Client có thể gửi 'client_port=25000' hoặc 'client_port= 25000'
                 self.clientInfo['rtpPort'] = 0
                 for line in lines:
                     if "client_port" in line:
                         try:
-                            # Tách chuỗi phức tạp: Transport: RTP/UDP; client_port=25000
                             parts = line.split(';')
                             for part in parts:
                                 if "client_port" in part:
@@ -128,69 +133,79 @@ class ServerWorker:
         # Process TEARDOWN request
         elif requestType == self.TEARDOWN:
             print("processing TEARDOWN\n")
-            self.state = self.INIT # Reset state
+            self.state = self.INIT 
             self.clientInfo['event'].set()
             self.replyRtsp(self.OK_200, seq)
             
-            # Dọn dẹp tài nguyên sạch sẽ
             if 'rtpSocket' in self.clientInfo:
                 self.clientInfo['rtpSocket'].close()
             if 'videoStream' in self.clientInfo:
                 self.clientInfo['videoStream'].close() 
             
     def sendRtp(self):
-        """Send RTP packets over UDP."""
+        """Send RTP packets over UDP with Fragmentation logic."""
+        currentSeqNum = 0 
+        
         while True:
-            # Time Drift Correction (Chống lag video)
-            start_time = time.time()
-
+            # Time Drift Correction
             self.clientInfo['event'].wait(0.05) 
             
             if self.clientInfo['event'].is_set(): 
                 break 
                 
             data = self.clientInfo['videoStream'].nextFrame()
+            
             if data: 
                 frameNumber = self.clientInfo['videoStream'].frameNbr()
                 try:
                     address = self.clientInfo['rtspSocket'][1][0]
                     port = int(self.clientInfo['rtpPort'])
                     
-                    # Gửi gói tin
-                    self.clientInfo['rtpSocket'].sendto(self.makeRtp(data, frameNumber),(address,port))
+                    # --- [Role B] Logic Phân mảnh (Fragmentation) ---
+                    MAX_RTP_PAYLOAD = 1400 
+                    datalen = len(data)
+                    currentTimestamp = int(time.time()) 
                     
-                    # In log mỗi 50 frame để đỡ rác màn hình
+                    currPos = 0
+                    while currPos < datalen:
+                        chunkSize = min(MAX_RTP_PAYLOAD, datalen - currPos)
+                        chunk = data[currPos : currPos + chunkSize]
+                        currPos += chunkSize
+                        
+                        marker = 1 if currPos >= datalen else 0
+                        
+                        self.clientInfo['rtpSocket'].sendto(
+                            self.makeRtp(chunk, currentSeqNum, marker, currentTimestamp),
+                            (address, port)
+                        )
+                        currentSeqNum += 1
+                    
                     if frameNumber % 50 == 0:
-                        print(f"Sent frame {frameNumber}")
+                        print(f"Sent frame {frameNumber}, Total size: {datalen} bytes")
 
                 except Exception as e:
                     print(f"Connection Error: {e}")
             else:
-                # Hết video -> Tự động dừng hoặc Loop
                 print("End of video stream.")
                 self.clientInfo['event'].set()
                 break
 
-    def makeRtp(self, payload, frameNbr):
+    def makeRtp(self, payload, seqNum, marker, timestamp):
         """RTP-packetize the video data."""
         version = 2
         padding = 0
         extension = 0
         cc = 0
-        marker = 0
         pt = 26 # MJPEG type
-        seqnum = frameNbr
         ssrc = 0 
         
         rtpPacket = RtpPacket()
-        rtpPacket.encode(version, padding, extension, cc, seqnum, marker, pt, ssrc, payload)
+        rtpPacket.encode(version, padding, extension, cc, seqNum, marker, pt, ssrc, payload, timestamp)
         
         return rtpPacket.getPacket()
         
     def replyRtsp(self, code, seq):
         """Send RTSP reply to the client."""
-        # Format header chuẩn hơn (\r\n thay vì \n)
-        # Chuẩn RFC 2326 yêu cầu xuống dòng là \r\n (CRLF)
         if code == self.OK_200:
             reply = f'RTSP/1.0 200 OK\r\nCSeq: {seq}\r\nSession: {self.clientInfo["session"]}\r\n\r\n'
             connSocket = self.clientInfo['rtspSocket'][0]
@@ -199,4 +214,5 @@ class ServerWorker:
         elif code == self.FILE_NOT_FOUND_404:
             print("404 NOT FOUND")
         elif code == self.CON_ERR_500:
+            print("500 CONNECTION ERROR")
             print("500 CONNECTION ERROR")

@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 from time import time
 
 HEADER_SIZE = 12
@@ -8,9 +8,13 @@ class RtpPacket:
         self.header = bytearray(HEADER_SIZE)
         self.payload = bytearray()
         
-    def encode(self, version, padding, extension, cc, seqnum, marker, pt, ssrc, payload):
+    # [Role B Modified] Thêm tham số timestamp vào hàm encode
+    def encode(self, version, padding, extension, cc, seqnum, marker, pt, ssrc, payload, timestamp=None):
         """Encode the RTP packet with header fields and payload."""
-        timestamp = int(time())
+        
+        # Nếu không truyền timestamp thì mới lấy giờ hiện tại (giữ tương thích ngược)
+        if timestamp is None:
+            timestamp = int(time())
         
         self.header = bytearray(HEADER_SIZE)
         
