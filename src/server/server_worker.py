@@ -148,7 +148,7 @@ class ServerWorker:
         
         while True:
             # Time Drift Correction
-            self.clientInfo['event'].wait(0.05) 
+            self.clientInfo['event'].wait(0.033) 
             
             if self.clientInfo['event'].is_set(): 
                 break 

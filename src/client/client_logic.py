@@ -85,15 +85,31 @@ class Client:
         self.master.after(10, self.check_buffer)
 
     def updateMovie(self, imageBytes):
-        """Hiển thị ảnh lên Label"""
+        """Update the image file as video frame in the GUI."""
         try:
+            # 1. Đọc ảnh từ bytes
             image_stream = io.BytesIO(imageBytes)
             image = Image.open(image_stream)
+            
+            # --- [FIX LỖI GIAO DIỆN] ---
+            # Resize ảnh về kích thước cố định (ví dụ: chiều ngang 600px)
+            # để không làm vỡ giao diện Tkinter.
+            
+            base_width = 600 # Bạn có thể chỉnh số này to/nhỏ tùy màn hình
+            w_percent = (base_width / float(image.size[0]))
+            h_size = int((float(image.size[1]) * float(w_percent)))
+            
+            # Dùng LANCZOS để ảnh thu nhỏ vẫn nét
+            image = image.resize((base_width, h_size), Image.Resampling.LANCZOS)
+            # ---------------------------
+
             photo = ImageTk.PhotoImage(image)
-            self.label.configure(image=photo, height=288) 
+            
+            # Cập nhật lên giao diện
+            self.label.configure(image=photo, height=h_size) 
             self.label.image = photo
         except Exception as e:
-            pass
+            print(f"Error updating image: {e}")
 
     def handler(self):
         self.core.sendPause()
@@ -101,34 +117,3 @@ class Client:
             self.exitClient()
         else:
             self.core.sendPlay()
-
-# -------------------------------------------------------
-# PHẦN KHỞI CHẠY (MAIN)
-# -------------------------------------------------------
-if __name__ == "__main__":
-    print("--- CLIENT STARTING ---") # Dòng debug để biết code đã chạy
-    
-    # Thiết lập tham số mặc định nếu không nhập
-    serverAddr = '127.0.0.1'
-    serverPort = 3636
-    rtpPort = 25000
-    fileName = 'movie.Mjpeg'
-
-    # Nếu có tham số dòng lệnh thì lấy đè lên
-    if len(sys.argv) > 1: serverAddr = sys.argv[1]
-    if len(sys.argv) > 2: serverPort = int(sys.argv[2])
-    if len(sys.argv) > 3: rtpPort = int(sys.argv[3])
-    if len(sys.argv) > 4: fileName = sys.argv[4]
-
-    root = Tk()
-    root.title(f"Client Legacy (Test Role B) - Port {rtpPort}")
-    
-    # Căn giữa màn hình
-    w = 600; h = 380
-    ws = root.winfo_screenwidth(); hs = root.winfo_screenheight()
-    x = (ws/2) - (w/2); y = (hs/2) - (h/2)
-    root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-    
-    # Khởi tạo Client
-    app = Client(root, serverAddr, serverPort, rtpPort, fileName)
-    root.mainloop()
