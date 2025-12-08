@@ -67,8 +67,9 @@ The project requires MJPEG files with a specific header format. If you want to u
 ```bash
 # Convert your mp4 to the project's MJPEG format
 python converter.py
-The converted file will be saved in assets/video/.
 ```
+The converted file will be saved in assets/video/.
+
 ### 4. Running the Application
 You need to open two separate terminal windows.
 
