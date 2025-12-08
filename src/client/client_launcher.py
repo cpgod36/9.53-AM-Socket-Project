@@ -1,83 +1,76 @@
 import sys
 import os
-from tkinter import Tk
+from PyQt6.QtWidgets import QApplication 
+
+# Thêm đường dẫn src vào hệ thống để import
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 # -------------------------------------------------------------
-# CẤU HÌNH CHỌN GIAO DIỆN TẠI ĐÂY
-# 'legacy': Giao diện Tkinter cũ (Cho Nhật test logic)
-# 'modern': Giao diện PyQt/Figma mới (Cao làm)
-GUI_MODE = 'legacy' 
+# CẤU HÌNH GIAO DIỆN
+# 'legacy': Giao diện Tkinter cũ
+# 'modern': Giao diện PyQt5/6 hiện đại (Cyberpunk)
+# -------------------------------------------------------------
+GUI_MODE = 'modern'  
 # -------------------------------------------------------------
 
 def run_legacy_gui(serverAddr, serverPort, rtpPort, fileName):
-    """Chạy giao diện Tkinter cũ."""
+    """ Chạy giao diện Tkinter cũ (Để test logic cơ bản). """
     try:
         from src.client.client_logic import Client
-    except ImportError:
-        # Fallback import nếu chạy tại root
-        try:
-            from client_logic import Client
-        except ImportError:
-            # Fallback import nếu chạy trong src/client
-            sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-            from client_logic import Client
-
-    root = Tk()
-    app = Client(root, serverAddr, serverPort, rtpPort, fileName)
-    app.master.title(f"RTSP Client (Legacy) - {fileName}")    
-    root.mainloop()
-    
-    # Dọn dẹp
-    try:
-        app.exitClient()
-    except:
-        pass
-
-def run_modern_gui(serverAddr, serverPort, rtpPort, fileName):
-    """Chạy giao diện PyQt hiện đại (Sẽ implement sau)."""
-    print("[Launcher] Đang khởi động Modern UI...")
-    
-    try:
-        # Giả sử file giao diện mới tên là gui_modern.py
-        from src.client.gui import ModernClient
-        # PyQt cần QApplication, code cụ thể sẽ nằm trong gui_modern.py
-        app = ModernClient(serverAddr, serverPort, rtpPort, fileName)
-        app.run()
-    except ImportError:
-        print("[LỖI] Chưa tìm thấy file 'src/client/gui_modern.py'.")
-        print("Hãy tạo file này và import RtspClientCore vào đó.")
+        from tkinter import Tk
+        root = Tk()
+        app = Client(root, serverAddr, serverPort, rtpPort, fileName)
+        app.master.title(f"RTSP Client (Legacy) - {fileName}")    
+        root.mainloop()
     except Exception as e:
-        print(f"[LỖI] Không thể chạy Modern UI: {e}")
+        print(f"[Legacy Error] {e}")
 
-# -------------------------------------------------------------
+def run_modern_gui(server_ip, server_port, rtp_port, filename):
+    """ Chạy giao diện PyQt hiện đại (Final Product). """
+    print(f"[*] Launching Modern UI...")
+    print(f"    Target: {server_ip}:{server_port} | File: {filename}")
+    
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+
+    try:
+        from src.client.gui import ModernClient
+        
+        # Khởi tạo cửa sổ giao diện
+        window = ModernClient(server_ip, server_port, rtp_port, filename)
+        window.show()
+        
+        # Chạy vòng lặp sự kiện
+        sys.exit(app.exec())
+        
+    except Exception as e:
+        print(f"[CRITICAL ERROR] Không thể khởi động GUI: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     try:
+        # Kiểm tra tham số đầu vào
         if len(sys.argv) < 5:
-            # Hỗ trợ chạy default để đỡ gõ nhiều khi test
-            # python client_launcher.py -> Sẽ tự điền tham số mặc định
-            print("[Warning] Thiếu tham số, dùng tham số mặc định để test nhanh.")
-            serverAddr = "127.0.0.1"
-            serverPort = 8554 # Lưu ý: Port này phải khớp với Server
-            rtpPort = 25000
-            fileName = "movie.Mjpeg"
+            # Chế độ test nhanh (nếu lười gõ tham số)
+            print("[Info] Thiếu tham số -> Chạy chế độ mặc định (Test Mode)")
+            server_ip = "127.0.0.1"
+            server_port = "3636"
+            rtp_port = "25000"
+            filename = "movie_hd.Mjpeg"
         else:
-            serverAddr = sys.argv[1]
-            serverPort = sys.argv[2]
-            rtpPort = sys.argv[3]
-            fileName = sys.argv[4]    
-    except:
-        print("[!] Error parsing arguments.")
-        sys.exit(1)
-    
-    print(f"[*] Launcher started. Mode: {GUI_MODE}")
-    print(f"[*] Target: {serverAddr}:{serverPort} | Video: {fileName}")
+            server_ip = sys.argv[1]
+            server_port = sys.argv[2]
+            rtp_port = sys.argv[3]
+            filename = sys.argv[4]
 
-    if GUI_MODE == 'legacy':
-        run_legacy_gui(serverAddr, serverPort, rtpPort, fileName)
-    elif GUI_MODE == 'modern':
-        run_modern_gui(serverAddr, serverPort, rtpPort, fileName)
-    else:
-        print("Unknown GUI Mode.")
-    
-    sys.exit(0)
+        # Chọn chế độ chạy
+        if GUI_MODE == 'modern':
+            run_modern_gui(server_ip, server_port, rtp_port, filename)
+        else:
+            run_legacy_gui(server_ip, server_port, rtp_port, filename)
+            
+    except Exception as e:
+        print(f"[Lỗi] {e}")
+        sys.exit(1)

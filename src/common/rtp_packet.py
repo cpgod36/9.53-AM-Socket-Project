@@ -1,18 +1,39 @@
 ﻿import sys
 from time import time
 
+# Kích thước Header RTP chuẩn là 12 bytes
 HEADER_SIZE = 12
 
 class RtpPacket:    
+    """
+    Xử lý gói tin RTP (Real-time Transport Protocol).
+    Hỗ trợ Encode (đóng gói) và Decode (giải mã).
+    """
     def __init__(self):
         self.header = bytearray(HEADER_SIZE)
         self.payload = bytearray()
         
-    # [Role B Modified] Thêm tham số timestamp vào hàm encode
-    def encode(self, version, padding, extension, cc, seqnum, marker, pt, ssrc, payload, timestamp=None):
-        """Encode the RTP packet with header fields and payload."""
+    # =========================================================================
+    # ENCODING (ĐÓNG GÓI DỮ LIỆU)
+    # =========================================================================
         
-        # Nếu không truyền timestamp thì mới lấy giờ hiện tại (giữ tương thích ngược)
+    def encode(self, version, padding, extension, cc, seqnum, marker, pt, ssrc, payload, timestamp=None):
+        """
+        Tạo gói tin RTP từ các thông số đầu vào.
+        
+        :param version: RTP Version (thường là 2)
+        :param padding: Padding bit (0 hoặc 1)
+        :param extension: Extension bit
+        :param cc: CSRC Count
+        :param seqnum: Số thứ tự gói tin (Frame Index hoặc Fragment Index)
+        :param marker: Bit đánh dấu (1 = Kết thúc frame, 0 = Một phần của frame)
+        :param pt: Payload Type (MJPEG = 26)
+        :param ssrc: Synchronization Source Identifier
+        :param payload: Dữ liệu ảnh (hoặc mảnh của ảnh)
+        :param timestamp: Thời gian gửi (nếu None sẽ lấy thời gian thực)
+        """
+        
+        # Tự động lấy thời gian nếu không truyền vào
         if timestamp is None:
             timestamp = int(time())
         
@@ -40,39 +61,48 @@ class RtpPacket:
         self.header[10] = (ssrc >> 8) & 0xFF
         self.header[11] = ssrc & 0xFF
         
+        # Gán payload
         self.payload = payload
         
+    # =========================================================================
+    # DECODING (GIẢI MÃ DỮ LIỆU)
+    # =========================================================================
+    
     def decode(self, byteStream):
-        """Decode the RTP packet."""
+        """ Tách Header và Payload từ dòng dữ liệu nhận được. """
         if len(byteStream) < HEADER_SIZE:
             raise ValueError("Data stream too short to be RTP packet")
 
         self.header = bytearray(byteStream[:HEADER_SIZE])
         self.payload = byteStream[HEADER_SIZE:]
     
+    # =========================================================================
+    # GETTERS (LẤY THÔNG TIN HEADER)
+    # =========================================================================
+    
     def version(self):
-        """Return RTP version."""
+        """ Lấy RTP Version. """
         return int(self.header[0] >> 6)
     
     def seqNum(self):
-        """Return sequence (frame) number."""
+        """ Lấy Sequence Number (Dùng để tính Packet Loss). """
         seqNum = (self.header[2] << 8) | self.header[3] 
         return int(seqNum)
     
     def timestamp(self):
-        """Return timestamp."""
+        """ Lấy Timestamp. """
         timestamp = (self.header[4] << 24) | (self.header[5] << 16) | (self.header[6] << 8) | self.header[7]
         return int(timestamp)
     
     def payloadType(self):
-        """Return payload type."""
+        """ Lấy Payload Type. """
         pt = self.header[1] & 127
         return int(pt)
     
     def getPayload(self):
-        """Return payload."""
+        """ Lấy dữ liệu ảnh. """
         return self.payload
         
     def getPacket(self):
-        """Return RTP packet."""
+        """ Lấy toàn bộ gói RTP (Header + Payload) để gửi đi. """
         return self.header + self.payload

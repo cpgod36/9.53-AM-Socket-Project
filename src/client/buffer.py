@@ -1,13 +1,20 @@
 ﻿import queue
 
 class JitterBuffer:
+    """
+    Bộ đệm khung hình (Jitter Buffer).
+    Giúp ổn định luồng video khi mạng chập chờn hoặc gói tin đến không đều.
+    """
     def __init__(self, max_size=300):
-        # Sử dụng Queue của Python để đảm bảo Thread-safe (An toàn khi đa luồng truy cập)
         # max_size: Số lượng frame tối đa lưu trong bộ đệm
+        # Sử dụng Queue của Python để đảm bảo Thread-safe (An toàn đa luồng)
         self.buffer = queue.Queue(maxsize=max_size)
 
     def put(self, frame):
-        """Thêm frame vào hàng đợi (Được gọi bởi luồng mạng - Network Thread)"""
+        """
+        Thêm frame vào hàng đợi.
+        (Được gọi bởi luồng mạng - Network Thread/Core)
+        """
         if not self.buffer.full():
             self.buffer.put(frame)
         else:
@@ -20,7 +27,11 @@ class JitterBuffer:
                 pass
 
     def get(self):
-        """Lấy frame ra để hiển thị (Được gọi bởi luồng giao diện - UI Thread)"""
+        """
+        Lấy frame ra để hiển thị.
+        (Được gọi bởi luồng giao diện - UI Thread/Timer)
+        """
+
         try:
             # Lấy frame ra, nếu không có thì trả về None (không chặn UI)
             return self.buffer.get_nowait()
@@ -28,10 +39,13 @@ class JitterBuffer:
             return None
     
     def qsize(self):
-        """Kiểm tra số lượng frame hiện có"""
+        """ Kiểm tra số lượng frame hiện có """
         return self.buffer.qsize()
 
     def clear(self):
-        """Xóa sạch bộ đệm (Dùng khi Stop hoặc Seek video)"""
+        """ 
+        Xóa sạch bộ đệm.
+        Dùng khi Stop, Replay hoặc Switch Video để tránh hiện ảnh cũ. 
+        """
         with self.buffer.mutex:
             self.buffer.queue.clear()
