@@ -24,6 +24,10 @@ Thumbs.db
 assets/videos/*.mp4
 assets/videos/*.mkv
 assets/videos/*.avi
+# Bỏ qua tất cả file video MJPEG nặng
+*.Mjpeg
+*.mjpeg
+assets/video/*.Mjpeg
 
 # Giữ lại file mẫu movie.Mjpeg (dùng dấu chấm than để không ignore)
 !assets/videos/movie.Mjpeg

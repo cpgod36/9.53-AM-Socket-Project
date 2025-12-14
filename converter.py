@@ -68,7 +68,7 @@ def convert_to_hd_optimized(input_path, output_path, target_fps=30, quality=90):
 
 if __name__ == "__main__":
     INPUT = "input.mp4" 
-    OUTPUT = "assets/video/movie_hd.Mjpeg"
+    OUTPUT = "assets/video/movie_hd_sp.Mjpeg"
     
     # Convert về 30 FPS, Chất lượng 90 (Rất nét)
-    convert_to_hd_optimized(INPUT, OUTPUT, target_fps=30, quality=90)
+    convert_to_hd_optimized(INPUT, OUTPUT, target_fps=30, quality=100)

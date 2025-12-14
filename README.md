@@ -89,7 +89,7 @@ python -m src.client.client_launcher 127.0.0.1 3636 25000 movie_hd.Mjpeg
 9.53_SOCKET_PROJECT/
 │
 ├── assets/                  # Project Resources
-│   ├── fonts/               # Custom Fonts (Inter, Poppins, Science Gothic)
+│   ├── fonts/               # Custom Fonts
 │   ├── ui_design/           # Design Prototypes / Screenshots
 │   ├── ui_packs/            # SVG Assets for GUI (Buttons, Icons, Backgrounds)
 │   └── video/               # MJPEG Video Files for streaming
@@ -98,26 +98,11 @@ python -m src.client.client_launcher 127.0.0.1 3636 25000 movie_hd.Mjpeg
 │
 ├── src/                     # Source Code
 │   ├── client/              # Client-side Logic
-│   │   ├── gui.py           # Main Cyberpunk GUI (PyQt6)
-│   │   ├── rtsp_core.py     # Network Logic (RTSP/RTP, Stats, Reconnect)
-│   │   ├── buffer.py        # Jitter Buffer Implementation
-│   │   ├── client_launcher.py # Entry point for Client
-│   │   └── client_logic.py  # Legacy Logic (Backup)
 │   │
 │   ├── server/              # Server-side Logic
-│   │   ├── server_main.py   # Entry point for Server
-│   │   └── server_worker.py # Streaming Logic & Packet Fragmentation
 │   │
-│   ├── common/              # Shared Utilities
-│   │   ├── rtp_packet.py    # RTP Packet Handling
-│   │   └── video_stream.py  # MJPEG File Parser
-│   │
-│   └── __init__.py          # Package initialization
-│
-├── .gitignore               # Git configuration
-├── converter.py             # Tool to convert MP4/AVI to MJPEG format
-├── requirements.txt         # Python dependencies
-└── README.md                # Project documentation
+│   └── common/              # Shared Utilities
+└── converter.py             # Tool to convert MP4/AVI to MJPEG format
 ```
 ---
 ### 📝 License
